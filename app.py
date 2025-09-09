@@ -1,89 +1,80 @@
+"""
+Movie Mood Recommender App
+Main Flask application with refactored modular structure
+"""
+
 from flask import Flask, render_template, request
-import requests
-from textblob import TextBlob
-import os
+from services.movie_service import MovieService
+from config import Config
 
-app = Flask(__name__)
 
-# Load API Keys from environment variables
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+def create_app():
+    """Create and configure Flask application"""
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = Config.SECRET_KEY
+    app.config['DEBUG'] = Config.DEBUG
+    
+    # Initialize services
+    movie_service = MovieService()
+    
+    @app.route("/", methods=["GET", "POST"])
+    def home():
+        """Main route for movie search"""
+        movies = None
+        error = None
+        current_page = 1
+        total_pages = 1
+        search_params = {}
+        
+        # Handle pagination for GET requests
+        if request.method == "GET" and request.args.get("page"):
+            current_page = int(request.args.get("page", 1))
+            choice = request.args.get("choice")
+            search_params = {
+                "choice": choice,
+                "movie_name": request.args.get("movie_name", ""),
+                "description": request.args.get("description", "")
+            }
+        
+        # Process search requests
+        if request.method == "POST" or (request.method == "GET" and request.args.get("page")):
+            choice = request.form.get("choice") or request.args.get("choice")
+            
+            if choice == "name":
+                movie_name = (request.form.get("movie_name") or request.args.get("movie_name") or "").strip()
+                if not movie_name:
+                    error = "Please enter a movie name."
+                else:
+                    if not movie_service.omdb_service.is_available():
+                        error = "OMDB_API_KEY is missing. Please configure your .env."
+                    else:
+                        movies = movie_service.search_by_name(movie_name)
+                        search_params = {"choice": "name", "movie_name": movie_name}
+            
+            elif choice == "mood":
+                description = (request.form.get("description") or request.args.get("description") or "").strip()
+                if not description:
+                    error = "Please describe your mood."
+                else:
+                    search_params = {"choice": "mood", "description": description}
+                    
+                    # Check if any service is available
+                    services = movie_service.get_available_services()
+                    if not services["omdb"] and not services["tmdb"]:
+                        error = "TMDB_API_KEY or OMDB_API_KEY is missing. Please configure your .env."
+                    else:
+                        movies, total_pages = movie_service.search_by_mood(description, current_page)
+        
+        return render_template("index.html", 
+                             movies=movies, 
+                             error=error, 
+                             current_page=current_page,
+                             total_pages=total_pages,
+                             search_params=search_params)
+    
+    return app
 
-# Mood-to-genre mapping
-MOOD_GENRES = {
-    "happy": "35",       # Comedy
-    "sad": "18",         # Drama
-    "angry": "28",       # Action
-    "romantic": "10749", # Romance
-    "scared": "27"       # Horror
-}
-
-# Detect genre based on mood description
-def get_sentiment_genre(text):
-    polarity = TextBlob(text).sentiment.polarity
-    text_lower = text.lower()
-
-    # Explicit keyword detection
-    if "angry" in text_lower or "furious" in text_lower:
-        return MOOD_GENRES["angry"]
-    if "scared" in text_lower or "fear" in text_lower:
-        return MOOD_GENRES["scared"]
-    if "love" in text_lower or "romantic" in text_lower:
-        return MOOD_GENRES["romantic"]
-
-    # Sentiment-based fallback
-    if polarity > 0.5:
-        return MOOD_GENRES["happy"]
-    elif polarity < -0.3:
-        return MOOD_GENRES["sad"]
-    else:
-        return MOOD_GENRES["romantic"]
-
-def safe_request(url):
-    try:
-        resp = requests.get(url, timeout=5)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
-        return {}
-
-def search_movies_by_name(movie_name):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={movie_name}"
-    data = safe_request(url)
-    return data.get("results", [])
-
-def search_movies_by_genre(genre_id):
-    url = f"https://api.themoviedb.org/3/discover/movie?api_key={TMDB_API_KEY}&with_genres={genre_id}&sort_by=popularity.desc"
-    data = safe_request(url)
-    return data.get("results", [])
-
-def get_youtube_trailer(title):
-    query = f"{title} trailer"
-    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={query}&key={YOUTUBE_API_KEY}&type=video&maxResults=1"
-    data = safe_request(url)
-    if data.get("items"):
-        return f"https://www.youtube.com/watch?v={data['items'][0]['id']['videoId']}"
-    return None
-
-@app.route("/", methods=["GET", "POST"])
-def home():
-    movies = []
-    if request.method == "POST":
-        choice = request.form.get("choice")
-        if choice == "name":
-            movie_name = request.form.get("movie_name")
-            movies = search_movies_by_name(movie_name)
-        elif choice == "mood":
-            description = request.form.get("description")
-            genre_id = get_sentiment_genre(description)
-            movies = search_movies_by_genre(genre_id)
-
-        # Add YouTube trailers for top 5 results only
-        for m in movies[:5]:
-            m["trailer"] = get_youtube_trailer(m["title"])
-
-    return render_template("index.html", movies=movies)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app = create_app()
+    app.run(debug=Config.DEBUG)

@@ -1,12 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎬 Movie Mood Recommender</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .mood-suggestions {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .mood-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .mood-tag {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            text-decoration: none;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .mood-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: rgba(255,255,255,0.3);
+        }
+        
+        .mood-tag:active {
+            transform: translateY(0);
+        }
+        
+        /* Individual mood colors */
+        .mood-happy { background: linear-gradient(135deg, #ffd700, #ffed4e); color: #8b4513; }
+        .mood-excited { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); color: white; }
+        .mood-adventurous { background: linear-gradient(135deg, #4ecdc4, #6dd5ed); color: white; }
+        .mood-nostalgic { background: linear-gradient(135deg, #a8e6cf, #dcedc1); color: #2d5016; }
+        .mood-mysterious { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; }
+        .mood-bored { background: linear-gradient(135deg, #b2bec3, #ddd6fe); color: #2d3436; }
+        .mood-scared { background: linear-gradient(135deg, #2d3436, #636e72); color: white; }
+        .mood-romantic { background: linear-gradient(135deg, #fd79a8, #fdcb6e); color: white; }
+        .mood-curious { background: linear-gradient(135deg, #00b894, #00cec9); color: white; }
+        .mood-dreamy { background: linear-gradient(135deg, #e17055, #fdcb6e); color: white; }
+        
+        .mood-suggestions h6 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .mood-tag {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+            .mood-tags {
+                gap: 8px;
+            }
+        }
+    </style>
 </head>
 <body class="p-4 bg-light">
     <div class="container">
         <h1 class="mb-4">🎥 Movie Mood Recommender</h1>
+        <p class="lead text-muted">Discover movies that match your mood using TMDb & OMDb APIs</p>
+
+        {% if error %}
+        <div class="alert alert-warning">{{ error }}</div>
+        {% endif %}
 
         <form method="POST" class="mb-4">
             <div class="mb-3">
@@ -15,32 +89,122 @@
             </div>
             <div class="mb-3">
                 <label><input type="radio" name="choice" value="mood"> Search by Mood</label>
-                <textarea name="description" class="form-control" placeholder="Describe how you feel..."></textarea>
+                <textarea name="description" class="form-control" placeholder="Describe how you feel... (e.g., happy, excited, nostalgic, mysterious, bored, adventurous)"></textarea>
+                <div class="mood-suggestions mt-2">
+                    <h6 class="mb-3 text-muted">💡 Try these moods:</h6>
+                    <div class="mood-tags">
+                        <span class="mood-tag mood-happy" onclick="setMood('happy')">😊 Happy</span>
+                        <span class="mood-tag mood-excited" onclick="setMood('excited')">⚡ Excited</span>
+                        <span class="mood-tag mood-adventurous" onclick="setMood('adventurous')">🗺️ Adventurous</span>
+                        <span class="mood-tag mood-nostalgic" onclick="setMood('nostalgic')">📸 Nostalgic</span>
+                        <span class="mood-tag mood-mysterious" onclick="setMood('mysterious')">🔍 Mysterious</span>
+                        <span class="mood-tag mood-bored" onclick="setMood('bored')">😴 Bored</span>
+                        <span class="mood-tag mood-scared" onclick="setMood('scared')">👻 Scared</span>
+                        <span class="mood-tag mood-romantic" onclick="setMood('romantic')">💕 Romantic</span>
+                        <span class="mood-tag mood-curious" onclick="setMood('curious')">🤔 Curious</span>
+                        <span class="mood-tag mood-dreamy" onclick="setMood('dreamy')">✨ Dreamy</span>
+                    </div>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary">Find Movies</button>
         </form>
 
         {% if movies %}
-            <h2>Results:</h2>
+            <h2>Results ({{ movies|length }} movies):</h2>
             <div class="row">
                 {% for movie in movies %}
                     <div class="col-md-4 mb-3">
                         <div class="card shadow-sm">
-                            {% if movie.poster_path %}
-                            <img class="card-img-top" src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" alt="{{ movie.title }}">
+                            {% if movie.Poster and movie.Poster != "N/A" %}
+                            <img class="card-img-top" src="{{ movie.Poster }}" alt="{{ movie.Title }}">
                             {% endif %}
                             <div class="card-body">
-                                <h5 class="card-title">{{ movie.title }}</h5>
-                                <p class="card-text">{{ movie.overview[:150] }}...</p>
+                                <h5 class="card-title">{{ movie.Title }}</h5>
+                                <p class="card-text">{{ movie.Plot }}</p>
+                                <p><strong>Year:</strong> {{ movie.Year }}</p>
                                 {% if movie.trailer %}
                                 <a href="{{ movie.trailer }}" target="_blank" class="btn btn-danger">▶ Watch Trailer</a>
+                                {% else %}
+                                <span class="text-muted">No trailer available</span>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
                 {% endfor %}
             </div>
+            
+            <!-- Pagination Controls -->
+            {% if total_pages > 1 %}
+            <nav aria-label="Movie pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Page -->
+                    {% if current_page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ current_page - 1 }}&choice={{ search_params.choice }}&{% if search_params.choice == 'name' %}movie_name={{ search_params.movie_name }}{% else %}description={{ search_params.description }}{% endif %}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Page Numbers -->
+                    {% for page_num in range(1, total_pages + 1) %}
+                        {% if page_num == current_page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_num }}&choice={{ search_params.choice }}&{% if search_params.choice == 'name' %}movie_name={{ search_params.movie_name }}{% else %}description={{ search_params.description }}{% endif %}">{{ page_num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Next Page -->
+                    {% if current_page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ current_page + 1 }}&choice={{ search_params.choice }}&{% if search_params.choice == 'name' %}movie_name={{ search_params.movie_name }}{% else %}description={{ search_params.description }}{% endif %}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% elif movies is not none %}
+            <div class="alert alert-info">No results found. Try another name or mood.</div>
         {% endif %}
     </div>
+    
+    <script>
+        function setMood(mood) {
+            // Set the mood radio button as selected
+            document.querySelector('input[name="choice"][value="mood"]').checked = true;
+            
+            // Fill the description textarea with the selected mood
+            document.querySelector('textarea[name="description"]').value = mood;
+            
+            // Add a visual feedback
+            const clickedTag = event.target;
+            clickedTag.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                clickedTag.style.transform = '';
+            }, 150);
+            
+            // Optional: Auto-submit the form
+            // document.querySelector('form').submit();
+        }
+        
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const moodTags = document.querySelectorAll('.mood-tag');
+            
+            moodTags.forEach(tag => {
+                tag.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px) scale(1.05)';
+                });
+                
+                tag.addEventListener('mouseleave', function() {
+                    this.style.transform = '';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
