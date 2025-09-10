@@ -29,6 +29,11 @@ class YouTubeService(BaseAPIService):
         if not title or not self.validate_api_key(self.api_key, "YouTube"):
             return None
         
+        # Check if API key is placeholder value
+        if not self.api_key or self.api_key == "your_youtube_api_key":
+            print("Warning: YouTube API key is not configured. Please set YOUTUBE_API_KEY in your .env file.")
+            return None
+        
         query = f"{title} trailer"
         params = {
             "part": "snippet",

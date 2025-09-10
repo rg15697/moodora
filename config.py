@@ -14,8 +14,10 @@ class Config:
     
     # API Keys
     OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+    # YouTube key loaded only from environment (no hardcoded fallback)
     YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
     TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
     
     # App Settings
     DEBUG = os.getenv("DEBUG", "True").lower() == "true"

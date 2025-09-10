@@ -30,6 +30,11 @@ class TMDbService(BaseAPIService):
         if not self.validate_api_key(self.api_key, "TMDb"):
             return []
         
+        # Check if API key is placeholder value
+        if not self.api_key or self.api_key == "your_tmdb_api_key":
+            print("Warning: TMDb API key is not configured. Please set TMDB_API_KEY in your .env file.")
+            return []
+        
         url = f"{self.base_url}/discover/movie?api_key={self.api_key}&with_genres={genre_id}&sort_by=popularity.desc&page={page}"
         data = self.safe_request(url)
         return data.get("results", [])
@@ -47,6 +52,11 @@ class TMDbService(BaseAPIService):
         if not self.validate_api_key(self.api_key, "TMDb"):
             return {}
         
+        # Check if API key is placeholder value
+        if not self.api_key or self.api_key == "your_tmdb_api_key":
+            print("Warning: TMDb API key is not configured. Please set TMDB_API_KEY in your .env file.")
+            return {}
+        
         url = f"{self.base_url}/movie/{tmdb_id}?api_key={self.api_key}"
         return self.safe_request(url)
     
@@ -62,6 +72,11 @@ class TMDbService(BaseAPIService):
             int: Total pages available
         """
         if not self.validate_api_key(self.api_key, "TMDb"):
+            return 1
+        
+        # Check if API key is placeholder value
+        if not self.api_key or self.api_key == "your_tmdb_api_key":
+            print("Warning: TMDb API key is not configured. Please set TMDB_API_KEY in your .env file.")
             return 1
         
         url = f"{self.base_url}/discover/movie?api_key={self.api_key}&with_genres={genre_id}&sort_by=popularity.desc&page={page}"

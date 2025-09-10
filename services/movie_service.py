@@ -33,6 +33,8 @@ class MovieService:
             return []
         
         movies = self.omdb_service.search_movies_by_name(movie_name.strip())
+        # Limit results to configured maximum before enrichment
+        movies = movies[:Config.MAX_MOVIES_PER_PAGE]
         return self._add_trailers(movies)
     
     def search_by_mood(self, description: str, page: int = 1) -> tuple:
@@ -76,6 +78,8 @@ class MovieService:
         if not movies and self.omdb_service.is_available():
             genre_keyword = self.mood_detector.get_fallback_genre(mood)
             movies = self.omdb_service.search_movies_by_genre(genre_keyword)
+            # Limit results to configured maximum before enrichment
+            movies = movies[:Config.MAX_MOVIES_PER_PAGE]
             movies = self._add_trailers(movies)
         
         return movies, total_pages
@@ -96,6 +100,8 @@ class MovieService:
         if not self.youtube_service.is_available():
             return movies
         
+        # Ensure we only enrich up to the configured maximum
+        movies = movies[:Config.MAX_MOVIES_PER_PAGE]
         detailed_movies = []
         for movie in movies:
             if movie.get("tmdb_id"):
