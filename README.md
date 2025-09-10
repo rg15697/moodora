@@ -1,4 +1,4 @@
-# Moodora – Mood & Context Based Movies recommender
+# Moodora – Mood & Context Based Movies recommendation system
 
 A Flask web application that recommends movies based on your current mood using TMDb and OMDb APIs.
 
